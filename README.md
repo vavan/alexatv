@@ -9,3 +9,11 @@ https://www.google.com/url?sa=i&rct=j&q=&esrc=s&source=images&cd=&cad=rja&uact=8
 irsend SEND_ONCE CT-90325 KEY_VOLUMEUP
 irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS && irsend SEND_ONCE CT-90325 KEY_2 # roku
 irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS && irsend SEND_ONCE CT-90325 KEY_3 # xbox
+
+
+https://developer.amazon.com/blogs/post/Tx3CX1ETRZZ2NPC/Alexa-Account-Linking-5-Steps-to-Seamlessly-Link-Your-Alexa-Skill-with-Login-wit
+
+
+https://developer.amazon.com/docs/smarthome/steps-to-build-a-smart-home-skill.html
+
+
