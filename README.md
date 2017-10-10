@@ -17,3 +17,5 @@ https://developer.amazon.com/blogs/post/Tx3CX1ETRZZ2NPC/Alexa-Account-Linking-5-
 https://developer.amazon.com/docs/smarthome/steps-to-build-a-smart-home-skill.html
 
 
+https://www.amazon.com/gp/help/customer/display.html?nodeId=468496
+
