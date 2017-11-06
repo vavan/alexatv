@@ -19,3 +19,10 @@ https://developer.amazon.com/docs/smarthome/steps-to-build-a-smart-home-skill.ht
 
 https://www.amazon.com/gp/help/customer/display.html?nodeId=468496
 
+https://stackoverflow.com/questions/45182599/smart-home-device-implementing-alexa-speaker-interface-not-responding-to-volume/47130105#47130105
+
+
+http://docs.aws.amazon.com/iot/latest/developerguide/iot-sdk-setup.html
+
+
+
