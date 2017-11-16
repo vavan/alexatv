@@ -25,4 +25,4 @@ https://stackoverflow.com/questions/45182599/smart-home-device-implementing-alex
 http://docs.aws.amazon.com/iot/latest/developerguide/iot-sdk-setup.html
 
 
-
+https://forums.aws.amazon.com/thread.jspa?threadID=224538
