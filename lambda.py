@@ -1,6 +1,8 @@
+import boto3
 import logging
 import time
 import json
+
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -114,6 +116,9 @@ def handle_power_controller(request):
         powerResult = "OFF"
 
     logger.info("Power: %s"%powerResult)
+    client = boto3.client('iot-data')
+    client.publish(topic='sdk/python/tv', payload='power:%s'%powerResult)
+    
     return build_response(request, "Alexa.PowerController", "powerState", powerResult)
 
 
@@ -122,10 +127,14 @@ def handle_step_speaker(request):
     if "volumeSteps" in payload:
         requestValue = payload["volumeSteps"]
         logger.info("Volume: %s"%requestValue)
+        client = boto3.client('iot-data')
+        client.publish(topic='sdk/python/tv', payload='volume:%s'%requestValue)
         return build_response(request, "Alexa.Speaker", "volumeSteps", requestValue)
     elif "mute" in payload:
         requestValue = payload["mute"]
         logger.info("Mute: %s"%requestValue)
+        client = boto3.client('iot-data')
+        client.publish(topic='sdk/python/tv', payload='mute:%s'%requestValue)
         return build_response(request, "Alexa.Speaker", "muted", requestValue)   
 
 
@@ -133,13 +142,10 @@ def handle_input(request):
     requestValue = request["directive"]["payload"]["input"]
 
     logger.info("Input: %s"%requestValue)
+    client = boto3.client('iot-data')
+    client.publish(topic='sdk/python/tv', payload='input:%s'%requestValue)
     return build_response(request, "Alexa.InputController", "input", requestValue)
 
-def handle_percent(request):
-    requestValue = request["directive"]["payload"]["percentage"]
-
-    logger.info("Percentage: %s"%requestValue)
-    return build_response(request, "Alexa.PercentageController", "percentage", requestValue)
 
 def handle_error(request):
     requestToken = request["directive"]["endpoint"]["scope"]["token"]
@@ -155,4 +161,3 @@ def handle_error(request):
             }
         }
     return response
-
