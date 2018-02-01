@@ -3,39 +3,74 @@ import logging
 import time
 import argparse
 import os
+import RPi.GPIO as GPIO
 
 
+GPIO.setmode(GPIO.BCM)
+
+
+class PowerSensor:
+    PIN = 23
+    TIMEOUT = 1000000
+    ITERATIONS = 3
+    THREASHOLD = 8000
+    def read(self):
+        value = 0
+        GPIO.setup(self.PIN, GPIO.OUT)
+        GPIO.output(self.PIN, GPIO.LOW)
+        time.sleep(0.1)
+        GPIO.setup(self.PIN, GPIO.IN)
+        while (GPIO.input(self.PIN) == GPIO.LOW and value < self.TIMEOUT):
+            value += 1
+        return value
+    def is_on(self):
+        value = 0
+        for i in range(self.ITERATIONS):
+            value += self.read()
+        value = value / self.ITERATIONS
+        return value < self.THREASHOLD
 
 
 
 # Custom MQTT message callback
 def customCallback(client, userdata, message):
-    print(message.payload)
+    #print(message.payload)
     cmd,arg = message.payload.split(':')
     if cmd == 'power':
         if arg == 'ON':
-            print 'power on'
-            os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
+            if PowerSensor().is_on():
+                print 'already on'
+            else:
+                print 'power on'
+                os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
         else:
-            print 'power off'
-            os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
+            if PowerSensor().is_on():
+                print 'power off'
+                os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
+            else:
+                print 'already off'
     elif cmd == 'input':
-        if arg == 'XBOX':
+        arg = arg.lower()
+        if arg == 'xbox':
             print 'xbox'
             os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
             os.system('irsend SEND_ONCE CT-90325 KEY_3')
-        else:
+        elif arg in ('roku', 'cable', 'netflix', 'movies'):
             print 'roku'
             os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
             os.system('irsend SEND_ONCE CT-90325 KEY_2')
+        else:
+            print 'hdmi3'
+            os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
+            os.system('irsend SEND_ONCE CT-90325 KEY_4')
     elif cmd == 'volume':
         arg = int(arg)
         if arg > 0:
-            print 'v up', arg
+            print 'volume up', arg
             for i in range(arg):
                 os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEUP')
         else:
-            print 'v do', arg
+            print 'volume do', arg
             for i in range(-arg):
                 os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEDOWN')
     elif cmd == 'mute':
@@ -109,8 +144,10 @@ myAWSIoTMQTTClient.subscribe(topic, 1, customCallback)
 time.sleep(2)
 
 # Publish to the same topic in a loop forever
-loopCount = 0
+#loopCount = 0
+#p = PowerSensor()
 while True:
     #myAWSIoTMQTTClient.publish(topic, "New Message " + str(loopCount), 1)
-    loopCount += 1
+#    loopCount += 1
     time.sleep(1)
+#    print p.is_on()
