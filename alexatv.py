@@ -1,4 +1,6 @@
+#!/usr/bin/python
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
+import ConfigParser
 import logging
 import time
 import argparse
@@ -6,9 +8,9 @@ import os
 import RPi.GPIO as GPIO
 
 
+DEBUG = 1
+
 GPIO.setmode(GPIO.BCM)
-
-
 class PowerSensor:
     PIN = 23
     TIMEOUT = 1000000
@@ -32,9 +34,9 @@ class PowerSensor:
 
 
 
-# Custom MQTT message callback
-def customCallback(client, userdata, message):
-    #print(message.payload)
+
+def mqtt_callback(client, userdata, message):
+    #logger = logging.getLogger("AWSIoTPythonSDK.core")
     cmd,arg = message.payload.split(':')
     if cmd == 'power':
         if arg == 'ON':
@@ -83,71 +85,55 @@ def customCallback(client, userdata, message):
             os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEUP')
 
 
-# Read in command-line parameters
-parser = argparse.ArgumentParser()
-parser.add_argument("-e", "--endpoint", action="store", required=True, dest="host", help="Your AWS IoT custom endpoint")
-parser.add_argument("-r", "--rootCA", action="store", required=True, dest="rootCAPath", help="Root CA file path")
-parser.add_argument("-c", "--cert", action="store", dest="certificatePath", help="Certificate file path")
-parser.add_argument("-k", "--key", action="store", dest="privateKeyPath", help="Private key file path")
-parser.add_argument("-w", "--websocket", action="store_true", dest="useWebsocket", default=False,
-                    help="Use MQTT over WebSocket")
-parser.add_argument("-id", "--clientId", action="store", dest="clientId", default="basicPubSub",
-                    help="Targeted client id")
-parser.add_argument("-t", "--topic", action="store", dest="topic", default="sdk/python/tv", help="Targeted topic")
+def read_config():
+    config = ConfigParser.ConfigParser({'endpoint': '', 'root_ca': 'root_ca.pem.cert',
+        'cert': 'certificate.pem.cert', 'private': 'private.pem.key'})
+    config.read('/etc/alexatv.cfg')
+#    if not args.certificatePath or not args.privateKeyPath):
+#        parser.error("Missing credentials for authentication.")
+#        exit(2)
+    return config
 
-args = parser.parse_args()
-host = args.host
-rootCAPath = args.rootCAPath
-certificatePath = args.certificatePath
-privateKeyPath = args.privateKeyPath
-useWebsocket = args.useWebsocket
-clientId = args.clientId
-topic = args.topic
 
-if args.useWebsocket and args.certificatePath and args.privateKeyPath:
-    parser.error("X.509 cert authentication and WebSocket are mutual exclusive. Please pick one.")
-    exit(2)
+#ENDPINT_ID = 'a178klppt8pjh0.iot.us-east-1.amazonaws.com'
 
-if not args.useWebsocket and (not args.certificatePath or not args.privateKeyPath):
-    parser.error("Missing credentials for authentication.")
-    exit(2)
+def init_logger():
+    logger = logging.getLogger("AWSIoTPythonSDK.core")
+    if DEBUG:
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
-# Configure logging
-logger = logging.getLogger("AWSIoTPythonSDK.core")
-logger.setLevel(logging.DEBUG)
-streamHandler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-streamHandler.setFormatter(formatter)
-logger.addHandler(streamHandler)
 
-# Init AWSIoTMQTTClient
-myAWSIoTMQTTClient = None
-if useWebsocket:
-    myAWSIoTMQTTClient = AWSIoTMQTTClient(clientId, useWebsocket=True)
-    myAWSIoTMQTTClient.configureEndpoint(host, 443)
-    myAWSIoTMQTTClient.configureCredentials(rootCAPath)
-else:
+
+def init_mqtt(config):
+    clientId = 'basicPubSub'
+    topic = 'sdk/python/tv'
+    iot_config = dict(config.items('aws_iot'))
+
+    # Init AWSIoTMQTTClient
+    myAWSIoTMQTTClient = None
     myAWSIoTMQTTClient = AWSIoTMQTTClient(clientId)
-    myAWSIoTMQTTClient.configureEndpoint(host, 8883)
-    myAWSIoTMQTTClient.configureCredentials(rootCAPath, privateKeyPath, certificatePath)
+    myAWSIoTMQTTClient.configureEndpoint(iot_config['endpoint'], 8883)
+    myAWSIoTMQTTClient.configureCredentials(iot_config['root_ca'], iot_config['private'], iot_config['cert'])
+    myAWSIoTMQTTClient.configureAutoReconnectBackoffTime(1, 32, 20)
+    myAWSIoTMQTTClient.configureOfflinePublishQueueing(-1)  # Infinite offline Publish queueing
+    myAWSIoTMQTTClient.configureDrainingFrequency(2)  # Draining: 2 Hz
+    myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
+    myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
 
-# AWSIoTMQTTClient connection configuration
-myAWSIoTMQTTClient.configureAutoReconnectBackoffTime(1, 32, 20)
-myAWSIoTMQTTClient.configureOfflinePublishQueueing(-1)  # Infinite offline Publish queueing
-myAWSIoTMQTTClient.configureDrainingFrequency(2)  # Draining: 2 Hz
-myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
-myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
+    # Connect and subscribe to AWS IoT
+    myAWSIoTMQTTClient.connect()
+    myAWSIoTMQTTClient.subscribe(topic, 1, mqtt_callback)
 
-# Connect and subscribe to AWS IoT
-myAWSIoTMQTTClient.connect()
-myAWSIoTMQTTClient.subscribe(topic, 1, customCallback)
-time.sleep(2)
 
-# Publish to the same topic in a loop forever
-#loopCount = 0
-#p = PowerSensor()
-while True:
-    #myAWSIoTMQTTClient.publish(topic, "New Message " + str(loopCount), 1)
-#    loopCount += 1
-    time.sleep(1)
-#    print p.is_on()
+if __name__ == '__main__':
+    config = read_config()
+    init_logger()
+    init_mqtt(config)
+    time.sleep(2)
+    while True:
+        time.sleep(1)
+
