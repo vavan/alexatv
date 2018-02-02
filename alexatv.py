@@ -36,9 +36,12 @@ class PowerSensor:
 
 
 def mqtt_callback(client, userdata, message):
-    #logger = logging.getLogger("AWSIoTPythonSDK.core")
-    cmd,arg = message.payload.split(':')
+#    logger = logging.getLogger("AWSIoTPythonSDK.core")
+    cmd, arg = message.payload.split(':')
+#    print cmd, arg
+#    logger.debug(">>cmd=%s"%cmd)
     if cmd == 'power':
+#        print 'power11'
         if arg == 'ON':
             if PowerSensor().is_on():
                 print 'already on'
@@ -88,7 +91,7 @@ def mqtt_callback(client, userdata, message):
 def read_config():
     config = ConfigParser.ConfigParser({'endpoint': '', 'root_ca': 'root_ca.pem.cert',
         'cert': 'certificate.pem.cert', 'private': 'private.pem.key'})
-    config.read('/etc/alexatv.cfg')
+    config.read('/usr/local/etc/alexatv/alexatv.cfg')
 #    if not args.certificatePath or not args.privateKeyPath):
 #        parser.error("Missing credentials for authentication.")
 #        exit(2)
@@ -112,12 +115,13 @@ def init_mqtt(config):
     clientId = 'basicPubSub'
     topic = 'sdk/python/tv'
     iot_config = dict(config.items('aws_iot'))
+    prefix = '/usr/local/etc/alexatv/'
 
     # Init AWSIoTMQTTClient
     myAWSIoTMQTTClient = None
     myAWSIoTMQTTClient = AWSIoTMQTTClient(clientId)
     myAWSIoTMQTTClient.configureEndpoint(iot_config['endpoint'], 8883)
-    myAWSIoTMQTTClient.configureCredentials(iot_config['root_ca'], iot_config['private'], iot_config['cert'])
+    myAWSIoTMQTTClient.configureCredentials(prefix+iot_config['root_ca'], prefix+iot_config['private'], prefix+iot_config['cert'])
     myAWSIoTMQTTClient.configureAutoReconnectBackoffTime(1, 32, 20)
     myAWSIoTMQTTClient.configureOfflinePublishQueueing(-1)  # Infinite offline Publish queueing
     myAWSIoTMQTTClient.configureDrainingFrequency(2)  # Draining: 2 Hz

@@ -9,7 +9,7 @@
 # Description:		Enable service provided by alexatv.
 ### END INIT INFO
 
-dir="/usr/local/lib/alexatv/"
+dir="/usr/local/bin"
 cmd="python alexatv.py"
 
 
@@ -33,7 +33,7 @@ case "$1" in
     else
         echo "Starting $name"
         cd "$dir"
-        sudo $cmd >> "$log" 2>&1
+        sudo $cmd >> "$log" 2>&1 &
         echo $! > "$pid_file"
         if ! is_running; then
             echo "Unable to start, see $log"
