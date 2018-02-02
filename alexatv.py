@@ -36,55 +36,52 @@ class PowerSensor:
 
 
 def mqtt_callback(client, userdata, message):
-#    logger = logging.getLogger("AWSIoTPythonSDK.core")
+    logger = logging.getLogger("AWSIoTPythonSDK.core")
     cmd, arg = message.payload.split(':')
-#    print cmd, arg
-#    logger.debug(">>cmd=%s"%cmd)
     if cmd == 'power':
-#        print 'power11'
         if arg == 'ON':
             if PowerSensor().is_on():
-                print 'already on'
+                logger.debug('already on')
             else:
-                print 'power on'
+                logger.debug('power on')
                 os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
         else:
             if PowerSensor().is_on():
-                print 'power off'
+                logger.debug('power off')
                 os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
             else:
-                print 'already off'
+                 logger.debug('already off')
     elif cmd == 'input':
         arg = arg.lower()
         if arg == 'xbox':
-            print 'xbox'
+            logger.debug('xbox')
             os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
             os.system('irsend SEND_ONCE CT-90325 KEY_3')
         elif arg in ('roku', 'cable', 'netflix', 'movies'):
-            print 'roku'
+            logger.debug('roku')
             os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
             os.system('irsend SEND_ONCE CT-90325 KEY_2')
         else:
-            print 'hdmi3'
+            logger.debug('hdmi3')
             os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
             os.system('irsend SEND_ONCE CT-90325 KEY_4')
     elif cmd == 'volume':
         arg = int(arg)
         if arg > 0:
-            print 'volume up', arg
+            logger.debug('volume up ' + arg)
             for i in range(arg):
                 os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEUP')
         else:
-            print 'volume do', arg
+            logger.debug('volume do ' + arg)
             for i in range(-arg):
                 os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEDOWN')
     elif cmd == 'mute':
         if arg == 'True':
-            print 'mute'
+            logger.debug('mute')
             os.system('irsend SEND_ONCE CT-90325 KEY_MUTE')
             os.system('irsend SEND_ONCE CT-90325 KEY_MUTE')
         else:
-            print 'unmute'
+            logger.debug('unmute')
             os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEUP')
 
 
