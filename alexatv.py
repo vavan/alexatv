@@ -105,10 +105,9 @@ def init_logger():
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+    return logger
 
-
-
-def init_mqtt(config):
+def init_mqtt(config, logger):
     clientId = 'basicPubSub'
     topic = 'sdk/python/tv'
     iot_config = dict(config.items('aws_iot'))
@@ -125,15 +124,21 @@ def init_mqtt(config):
     myAWSIoTMQTTClient.configureConnectDisconnectTimeout(10)  # 10 sec
     myAWSIoTMQTTClient.configureMQTTOperationTimeout(5)  # 5 sec
 
-    # Connect and subscribe to AWS IoT
-    myAWSIoTMQTTClient.connect()
-    myAWSIoTMQTTClient.subscribe(topic, 1, mqtt_callback)
+    for i in range(5):
+        try:
+            # Connect and subscribe to AWS IoT
+            myAWSIoTMQTTClient.connect()
+            myAWSIoTMQTTClient.subscribe(topic, 1, mqtt_callback)
+            break
+        except Exception:
+            logging.exception("We got a MQTT trouble")
+            time.sleep(3)
 
 
 if __name__ == '__main__':
     config = read_config()
-    init_logger()
-    init_mqtt(config)
+    logger = init_logger()
+    init_mqtt(config, logger)
     time.sleep(2)
     while True:
         time.sleep(1)
