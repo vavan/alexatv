@@ -4,10 +4,41 @@ import time
 import json
 
 
+
+'''
+Lambda function for Alexa TV control.
+
+Reacts on following Alexa commands:
+    Alexa, volume up TV
+    Alexa, increase volume on TV
+    Alexa, increse volume on TV by 25
+    Alexa, volume down TV
+    Alexa, change TV input to XBOX
+    Alexa, set TV input to Roku
+    Alexa, turn off TV
+    Alexa, turn TV off
+
+Check details in further comments
+'''
+
+
+MQTT_TOPIC='sdk/python/tv'
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+def mqtt_publish(payload):
+    '''Publish to the topic - the payload would be delivered to Raspberry.
+       The only exteption following code generates is permission related,
+       if you need to debug deeper add raise at the very end'''
+    try:
+        client = boto3.client('iot-data')
+        client.publish(topic=MQTT_TOPIC, payload=payload)
+    except:
+        logger.warning('Unable to publish, check permissions')
+
 def handler(request, context):
+    '''Root handler, all Alexa requests starts from here'''
     try:
         logger.info("Request:")
         logger.info(json.dumps(request, indent=4, sort_keys=True))
@@ -25,13 +56,33 @@ def handler(request, context):
 
         logger.info("Response:")
         logger.info(json.dumps(response, indent=4, sort_keys=True))
-
         return response
     except ValueError as error:
         logger.error(error)
         raise
 
 def handle_discovery(request):
+    '''
+    Response to Discovery request.
+    Endpoint properties:
+        * friendlyName - name Alexa will recognise
+        * description and manufacturerName - you may see this in the app
+        * all the rest - dosn't make any difference
+
+    Alexa Interfaces:
+        * AlexaInterface - must have
+        * Alexa.StepSpeaker:
+            * use this over Alexa.Speaker because remote doesn't know the current volume,
+                it only can increase or descrese
+            * "properties.supported" - don't try to fix this!
+            * volumeSteps - how much to increse volume (positive value) or decrese (negative valuea)
+            * muted - to mute or unmute TV (True, False).
+        * InputController:
+            * input - string, represent TV input, Raspberry knows Roku, XBOX and Fire
+        * PowerController:
+            * powerOn, powerOFF - turn on/off
+    '''
+
     endpoints = {
         "endpoints": [ {
             "endpointId": "tvcontrollerid",
@@ -39,13 +90,13 @@ def handle_discovery(request):
             "friendlyName": "TV",
             "description": "Living room TV",
             "displayCategories": ["TV"],
-            "capabilities": [ 
+            "capabilities": [
             {
                 "type": "AlexaInterface",
                 "interface": "Alexa",
                 "version": "3"
-            },                
-            {   
+            },
+            {
                 "type": "AlexaInterface",
                 "interface": "Alexa.StepSpeaker",
                 "version": "1.0",
@@ -116,9 +167,9 @@ def handle_power_controller(request):
         powerResult = "OFF"
 
     logger.info("Power: %s"%powerResult)
-    client = boto3.client('iot-data')
-    client.publish(topic='sdk/python/tv', payload='power:%s'%powerResult)
-    
+    #client = boto3.client('iot-data')
+    #client.publish(topic='sdk/python/tv', payload='power:%s'%powerResult)
+    mqtt_publish('power:%s'%powerResult)
     return build_response(request, "Alexa.PowerController", "powerState", powerResult)
 
 
@@ -127,23 +178,26 @@ def handle_step_speaker(request):
     if "volumeSteps" in payload:
         requestValue = payload["volumeSteps"]
         logger.info("Volume: %s"%requestValue)
-        client = boto3.client('iot-data')
-        client.publish(topic='sdk/python/tv', payload='volume:%s'%requestValue)
+        #client = boto3.client('iot-data')
+        #client.publish(topic='sdk/python/tv', payload='volume:%s'%requestValue)
+        mqtt_publish(payload='volume:%s'%requestValue)
         return build_response(request, "Alexa.Speaker", "volumeSteps", requestValue)
     elif "mute" in payload:
         requestValue = payload["mute"]
         logger.info("Mute: %s"%requestValue)
-        client = boto3.client('iot-data')
-        client.publish(topic='sdk/python/tv', payload='mute:%s'%requestValue)
-        return build_response(request, "Alexa.Speaker", "muted", requestValue)   
+        #client = boto3.client('iot-data')
+        #client.publish(topic='sdk/python/tv', payload='mute:%s'%requestValue)
+        mqtt_publish(payload='mute:%s'%requestValue)
+        return build_response(request, "Alexa.Speaker", "muted", requestValue)
 
 
 def handle_input(request):
     requestValue = request["directive"]["payload"]["input"]
 
     logger.info("Input: %s"%requestValue)
-    client = boto3.client('iot-data')
-    client.publish(topic='sdk/python/tv', payload='input:%s'%requestValue)
+    #client = boto3.client('iot-data')
+    #client.publish(topic='sdk/python/tv', payload='input:%s'%requestValue)
+    mqtt_publish(payload='input:%s'%requestValue)
     return build_response(request, "Alexa.InputController", "input", requestValue)
 
 
@@ -161,3 +215,4 @@ def handle_error(request):
             }
         }
     return response
+
