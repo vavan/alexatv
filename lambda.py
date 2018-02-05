@@ -3,8 +3,6 @@ import logging
 import time
 import json
 
-
-
 '''
 Lambda function for Alexa TV control.
 
@@ -22,7 +20,7 @@ Check details in further comments
 '''
 
 
-MQTT_TOPIC='sdk/python/tv'
+MQTT_TOPIC='vova/alexa/tv'
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -53,7 +51,6 @@ def handler(request, context):
             response = handle_input(request)
         else:
             response = handle_error(request)
-
         logger.info("Response:")
         logger.info(json.dumps(response, indent=4, sort_keys=True))
         return response
@@ -82,7 +79,6 @@ def handle_discovery(request):
         * PowerController:
             * powerOn, powerOFF - turn on/off
     '''
-
     endpoints = {
         "endpoints": [ {
             "endpointId": "tvcontrollerid",
@@ -130,18 +126,15 @@ def handle_discovery(request):
             ]
         } ]
     }
-
     header = request["directive"]["header"];
     header["name"] = "Discover.Response";
     response = { 'event': { 'header': header, 'payload': endpoints } }
     return response
 
-
 def build_response(request, namespace, name, value):
     header = request["directive"]["header"]
     header["namespace"] = "Alexa"
     header["name"] = "Response"
-
     response = {
             'context': {
                 "properties": [{
@@ -165,49 +158,34 @@ def handle_power_controller(request):
         powerResult = "ON"
     elif requestMethod == "TurnOff":
         powerResult = "OFF"
-
     logger.info("Power: %s"%powerResult)
-    #client = boto3.client('iot-data')
-    #client.publish(topic='sdk/python/tv', payload='power:%s'%powerResult)
     mqtt_publish('power:%s'%powerResult)
     return build_response(request, "Alexa.PowerController", "powerState", powerResult)
-
 
 def handle_step_speaker(request):
     payload = request["directive"]["payload"]
     if "volumeSteps" in payload:
         requestValue = payload["volumeSteps"]
         logger.info("Volume: %s"%requestValue)
-        #client = boto3.client('iot-data')
-        #client.publish(topic='sdk/python/tv', payload='volume:%s'%requestValue)
         mqtt_publish(payload='volume:%s'%requestValue)
         return build_response(request, "Alexa.Speaker", "volumeSteps", requestValue)
     elif "mute" in payload:
         requestValue = payload["mute"]
         logger.info("Mute: %s"%requestValue)
-        #client = boto3.client('iot-data')
-        #client.publish(topic='sdk/python/tv', payload='mute:%s'%requestValue)
         mqtt_publish(payload='mute:%s'%requestValue)
         return build_response(request, "Alexa.Speaker", "muted", requestValue)
 
-
 def handle_input(request):
     requestValue = request["directive"]["payload"]["input"]
-
     logger.info("Input: %s"%requestValue)
-    #client = boto3.client('iot-data')
-    #client.publish(topic='sdk/python/tv', payload='input:%s'%requestValue)
     mqtt_publish(payload='input:%s'%requestValue)
     return build_response(request, "Alexa.InputController", "input", requestValue)
 
-
 def handle_error(request):
     requestToken = request["directive"]["endpoint"]["scope"]["token"]
-
     header = request["directive"]["header"]
     header["namespace"] = "Alexa"
     header["name"] = "ErrorResponse"
-
     response = {
             'event': {
                 'header': header,

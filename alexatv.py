@@ -9,7 +9,7 @@ import RPi.GPIO as GPIO
 
 
 CONFIG_FILE='/usr/local/etc/alexatv/alexatv.cfg'
-MQTT_TOPIC='sdk/python/tv'
+MQTT_TOPIC='vova/alexa/tv'
 
 def read_config():
     config = ConfigParser.ConfigParser({'endpoint': '', 'root_ca': 'root_ca.pem.cert',
