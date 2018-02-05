@@ -15,9 +15,6 @@ def read_config():
     config = ConfigParser.ConfigParser({'endpoint': '', 'root_ca': 'root_ca.pem.cert',
         'certificate': 'certificate.pem.cert', 'private': 'private.pem.key'})
     config.read(CONFIG_FILE)
-#    if not args.certificatePath or not args.privateKeyPath):
-#        parser.error("Missing credentials for authentication.")
-#        exit(2)
     return config
 
 def init_logger():
@@ -34,10 +31,12 @@ class PowerSensor:
     PIN = 23
     TIMEOUT = 50000
     THREASHOLD = 20000
+    enable=False
     @staticmethod
-    def init():
+    def init(enable = False):
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
+        PowerSensor.enable = enable
     def read(self):
         value = 0
         GPIO.setup(self.PIN, GPIO.OUT)
@@ -56,17 +55,17 @@ def mqtt_callback(client, userdata, message):
     cmd, arg = message.payload.split(':')
     if cmd == 'power':
         if arg == 'ON':
-            if PowerSensor().is_on():
+            if PowerSensor.enable and PowerSensor().is_on():
                 logger.info('already on')
             else:
                 logger.info('power on')
                 os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
         else:
-            if PowerSensor().is_on():
+            if PowerSensor.enable and not PowerSensor().is_on():
+                logger.info('already off')
+            else:
                 logger.info('power off')
                 os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
-            else:
-                 logger.info('already off')
     elif cmd == 'input':
         arg = arg.lower()
         if arg == 'xbox':
@@ -131,7 +130,9 @@ def init_mqtt(config, logger):
 if __name__ == '__main__':
     config = read_config()
     logger = init_logger()
-    PowerSensor.init()
+    sensor_enabled = config.getboolean('remote', 'sensor_enabled')
+    logger.info('Power sensor enable: %s'%sensor_enabled)
+    PowerSensor.init(enable = sensor_enabled)
     init_mqtt(config, logger)
     while True:
         time.sleep(10)
