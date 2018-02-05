@@ -8,13 +8,36 @@ import os
 import RPi.GPIO as GPIO
 
 
+CONFIG_FILE='/usr/local/etc/alexatv/alexatv.cfg'
+MQTT_TOPIC='sdk/python/tv'
 
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
+def read_config():
+    config = ConfigParser.ConfigParser({'endpoint': '', 'root_ca': 'root_ca.pem.cert',
+        'certificate': 'certificate.pem.cert', 'private': 'private.pem.key'})
+    config.read(CONFIG_FILE)
+#    if not args.certificatePath or not args.privateKeyPath):
+#        parser.error("Missing credentials for authentication.")
+#        exit(2)
+    return config
+
+def init_logger():
+    logger = logging.getLogger("AWSIoTPythonSDK.core")
+    logger.handlers = []
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
+
 class PowerSensor:
     PIN = 23
     TIMEOUT = 50000
     THREASHOLD = 20000
+    @staticmethod
+    def init():
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
     def read(self):
         value = 0
         GPIO.setup(self.PIN, GPIO.OUT)
@@ -27,7 +50,6 @@ class PowerSensor:
     def is_on(self):
         value = self.read()
         return value < self.THREASHOLD
-
 
 def mqtt_callback(client, userdata, message):
     logger = logging.getLogger("AWSIoTPythonSDK.core")
@@ -79,38 +101,16 @@ def mqtt_callback(client, userdata, message):
             os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEUP')
 
 
-def read_config():
-    config = ConfigParser.ConfigParser({'endpoint': '', 'root_ca': 'root_ca.pem.cert',
-        'cert': 'certificate.pem.cert', 'private': 'private.pem.key'})
-    config.read('/usr/local/etc/alexatv/alexatv.cfg')
-#    if not args.certificatePath or not args.privateKeyPath):
-#        parser.error("Missing credentials for authentication.")
-#        exit(2)
-    return config
-
-
-#ENDPINT_ID = 'a178klppt8pjh0.iot.us-east-1.amazonaws.com'
-
-def init_logger():
-    logger = logging.getLogger("AWSIoTPythonSDK.core")
-    logger.handlers = []
-    logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
 
 def init_mqtt(config, logger):
     clientId = 'basicPubSub'
-    topic = 'sdk/python/tv'
     iot_config = dict(config.items('aws_iot'))
 
     # Init AWSIoTMQTTClient
     myAWSIoTMQTTClient = None
     myAWSIoTMQTTClient = AWSIoTMQTTClient(clientId)
     myAWSIoTMQTTClient.configureEndpoint(iot_config['endpoint'], 8883)
-    myAWSIoTMQTTClient.configureCredentials(iot_config['root_ca'], iot_config['private'], iot_config['cert'])
+    myAWSIoTMQTTClient.configureCredentials(iot_config['root_ca'], iot_config['private'], iot_config['certificate'])
     myAWSIoTMQTTClient.configureAutoReconnectBackoffTime(1, 32, 20)
     myAWSIoTMQTTClient.configureOfflinePublishQueueing(-1)  # Infinite offline Publish queueing
     myAWSIoTMQTTClient.configureDrainingFrequency(2)  # Draining: 2 Hz
@@ -121,7 +121,7 @@ def init_mqtt(config, logger):
         try:
             # Connect and subscribe to AWS IoT
             myAWSIoTMQTTClient.connect()
-            myAWSIoTMQTTClient.subscribe(topic, 1, mqtt_callback)
+            myAWSIoTMQTTClient.subscribe(MQTT_TOPIC, 1, mqtt_callback)
             break
         except Exception:
             logging.exception("We got a MQTT trouble")
@@ -131,6 +131,7 @@ def init_mqtt(config, logger):
 if __name__ == '__main__':
     config = read_config()
     logger = init_logger()
+    PowerSensor.init()
     init_mqtt(config, logger)
     while True:
         time.sleep(10)
