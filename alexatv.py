@@ -10,28 +10,28 @@ import RPi.GPIO as GPIO
 
 DEBUG = 1
 
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 class PowerSensor:
     PIN = 23
-    TIMEOUT = 1000000
-    ITERATIONS = 3
-    THREASHOLD = 8000
+    TIMEOUT = 50000
+    #ITERATIONS = 3
+    THREASHOLD = 20000
     def read(self):
         value = 0
         GPIO.setup(self.PIN, GPIO.OUT)
         GPIO.output(self.PIN, GPIO.LOW)
-        time.sleep(0.1)
+        time.sleep(0.01)
         GPIO.setup(self.PIN, GPIO.IN)
         while (GPIO.input(self.PIN) == GPIO.LOW and value < self.TIMEOUT):
             value += 1
         return value
     def is_on(self):
-        value = 0
-        for i in range(self.ITERATIONS):
-            value += self.read()
-        value = value / self.ITERATIONS
+        #value = 0
+        #for i in range(self.ITERATIONS):
+        value = self.read()
+        #value = value / self.ITERATIONS
         return value < self.THREASHOLD
-
 
 
 
@@ -41,47 +41,47 @@ def mqtt_callback(client, userdata, message):
     if cmd == 'power':
         if arg == 'ON':
             if PowerSensor().is_on():
-                logger.debug('already on')
+                logger.info('already on')
             else:
-                logger.debug('power on')
+                logger.info('power on')
                 os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
         else:
             if PowerSensor().is_on():
-                logger.debug('power off')
+                logger.info('power off')
                 os.system('irsend SEND_ONCE CT-90325 KEY_POWER')
             else:
-                 logger.debug('already off')
+                 logger.info('already off')
     elif cmd == 'input':
         arg = arg.lower()
         if arg == 'xbox':
-            logger.debug('xbox')
+            logger.info('xbox')
             os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
             os.system('irsend SEND_ONCE CT-90325 KEY_3')
         elif arg in ('roku', 'cable', 'netflix', 'movies'):
-            logger.debug('roku')
+            logger.info('roku')
             os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
             os.system('irsend SEND_ONCE CT-90325 KEY_2')
         else:
-            logger.debug('hdmi3')
+            logger.info('hdmi3')
             os.system('irsend SEND_ONCE CT-90325 KEY_CYCLEWINDOWS')
             os.system('irsend SEND_ONCE CT-90325 KEY_4')
     elif cmd == 'volume':
         arg = int(arg)
         if arg > 0:
-            logger.debug('volume up ' + arg)
+            logger.info('volume up %s'%arg)
             for i in range(arg):
                 os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEUP')
         else:
-            logger.debug('volume do ' + arg)
+            logger.info('volume do %s'%arg)
             for i in range(-arg):
                 os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEDOWN')
     elif cmd == 'mute':
         if arg == 'True':
-            logger.debug('mute')
+            logger.info('mute')
             os.system('irsend SEND_ONCE CT-90325 KEY_MUTE')
             os.system('irsend SEND_ONCE CT-90325 KEY_MUTE')
         else:
-            logger.debug('unmute')
+            logger.info('unmute')
             os.system('irsend SEND_ONCE CT-90325 KEY_VOLUMEUP')
 
 
@@ -99,8 +99,9 @@ def read_config():
 
 def init_logger():
     logger = logging.getLogger("AWSIoTPythonSDK.core")
+    logger.handlers = []
     if DEBUG:
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.INFO)
         handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
