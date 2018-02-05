@@ -8,14 +8,12 @@ import os
 import RPi.GPIO as GPIO
 
 
-DEBUG = 1
 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 class PowerSensor:
     PIN = 23
     TIMEOUT = 50000
-    #ITERATIONS = 3
     THREASHOLD = 20000
     def read(self):
         value = 0
@@ -27,12 +25,8 @@ class PowerSensor:
             value += 1
         return value
     def is_on(self):
-        #value = 0
-        #for i in range(self.ITERATIONS):
         value = self.read()
-        #value = value / self.ITERATIONS
         return value < self.THREASHOLD
-
 
 
 def mqtt_callback(client, userdata, message):
@@ -100,9 +94,8 @@ def read_config():
 def init_logger():
     logger = logging.getLogger("AWSIoTPythonSDK.core")
     logger.handlers = []
-    if DEBUG:
-        logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -112,13 +105,12 @@ def init_mqtt(config, logger):
     clientId = 'basicPubSub'
     topic = 'sdk/python/tv'
     iot_config = dict(config.items('aws_iot'))
-    prefix = '/usr/local/etc/alexatv/'
 
     # Init AWSIoTMQTTClient
     myAWSIoTMQTTClient = None
     myAWSIoTMQTTClient = AWSIoTMQTTClient(clientId)
     myAWSIoTMQTTClient.configureEndpoint(iot_config['endpoint'], 8883)
-    myAWSIoTMQTTClient.configureCredentials(prefix+iot_config['root_ca'], prefix+iot_config['private'], prefix+iot_config['cert'])
+    myAWSIoTMQTTClient.configureCredentials(iot_config['root_ca'], iot_config['private'], iot_config['cert'])
     myAWSIoTMQTTClient.configureAutoReconnectBackoffTime(1, 32, 20)
     myAWSIoTMQTTClient.configureOfflinePublishQueueing(-1)  # Infinite offline Publish queueing
     myAWSIoTMQTTClient.configureDrainingFrequency(2)  # Draining: 2 Hz
@@ -140,7 +132,6 @@ if __name__ == '__main__':
     config = read_config()
     logger = init_logger()
     init_mqtt(config, logger)
-    time.sleep(2)
     while True:
-        time.sleep(1)
+        time.sleep(10)
 
