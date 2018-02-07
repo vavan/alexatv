@@ -10,7 +10,7 @@
 ### END INIT INFO
 
 dir="/usr/local/bin"
-cmd="python alexatv.py"
+cmd="python alexatv.py /usr/local/etc/alexatv/alexatv.cfg"
 
 
 name=`basename $0`

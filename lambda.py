@@ -72,6 +72,7 @@ def handle_discovery(request):
             * use this over Alexa.Speaker because remote doesn't know the current volume,
                 it only can increase or descrese
             * "properties.supported" - don't try to fix this!
+            * "version: 1.0" - this too, it's a bug in Speaker and StepSpeaker Interfaces
             * volumeSteps - how much to increse volume (positive value) or decrese (negative valuea)
             * muted - to mute or unmute TV (True, False).
         * InputController:

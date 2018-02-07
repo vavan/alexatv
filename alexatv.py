@@ -1,20 +1,18 @@
 #!/usr/bin/python
-from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
-import ConfigParser
+import os, sys, time
 import logging
-import time
 import argparse
-import os
+import ConfigParser
 import RPi.GPIO as GPIO
+from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 
 
-CONFIG_FILE='/usr/local/etc/alexatv/alexatv.cfg'
 MQTT_TOPIC='vova/alexa/tv'
 
-def read_config():
+def read_config(config_file):
     config = ConfigParser.ConfigParser({'endpoint': '', 'root_ca': 'root_ca.pem.cert',
         'certificate': 'certificate.pem.cert', 'private': 'private.pem.key'})
-    config.read(CONFIG_FILE)
+    config.read(config_file)
     return config
 
 def init_logger():
@@ -153,7 +151,11 @@ def init_mqtt(logger, config):
             time.sleep(3)
 
 if __name__ == '__main__':
-    config = read_config()
+    if len(sys.argv) >= 2:
+        config_file = sys.argv[1]
+    else:
+        config_file = '/usr/local/etc/alexatv/alexatv.cfg'
+    config = read_config(config_file)
     logger = init_logger()
     PowerSensor.init(logger, config.getboolean('remote', 'sensor_enabled'))
     Remote.init(logger)
