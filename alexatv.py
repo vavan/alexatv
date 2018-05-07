@@ -129,6 +129,8 @@ def mqtt_callback(client, userdata, message):
         Remote.set_mute(arg)
 
 def init_mqtt(logger, config):
+    # Wait a little, mqtt fails to connect right after reboot sometimes
+    time.sleep(10)
     clientId = 'basicPubSub'
     # Init AWSIoTMQTTClient
     myAWSIoTMQTTClient = None
